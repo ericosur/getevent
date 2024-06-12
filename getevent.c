@@ -9,6 +9,7 @@
 //#include <sys/limits.h>
 #include <sys/poll.h>
 #include <linux/input.h>
+#include <err.h>
 #include <errno.h>
 #include <unistd.h>
 #include <time.h>
@@ -111,10 +112,8 @@ static int print_possible_events(int fd, int print_flags)
                 break;
             bits_size = res + 16;
             bits = realloc(bits, bits_size * 2);
-            if(bits == NULL) {
-                fprintf(stderr, "failed to allocate buffer of size %d\n", (int)bits_size);
-                return 1;
-            }
+            if(bits == NULL)
+                err(1, "failed to allocate buffer of size %d\n", (int)bits_size);
         }
         res2 = 0;
         switch(i) {
@@ -323,7 +322,7 @@ static int open_device(const char *device, int print_flags)
     char idstr[80];
     struct input_id id;
 
-    fd = open(device, O_RDWR);
+    fd = open(device, O_RDONLY | O_CLOEXEC);
     if(fd < 0) {
         if(print_flags & PRINT_DEVICE_ERRORS)
             fprintf(stderr, "could not open %s, %s\n", device, strerror(errno));
@@ -531,6 +530,9 @@ int main(int argc, char *argv[])
     int64_t last_sync_time = 0;
     const char *device = NULL;
     const char *device_path = "/dev/input";
+
+    /* disable buffering on stdout */
+    setbuf(stdout, NULL);
 
     opterr = 0;
     do {
